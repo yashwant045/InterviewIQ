@@ -1,0 +1,19 @@
+{
+  "name": "interviewiq-workspace",
+  "version": "1.0.0",
+  "description": "InterviewIQ (TalentIQ) Full-Stack Monorepo",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:ai": "cd ai-service && python main.py",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "test:backend": "cd backend && npm test"
+  },
+  "dependencies": {
+    "axios": "^1.21.0",
+    "lucide-react": "^1.70.0",
+    "react-router-dom": "^7.18.5"
+  }
+}

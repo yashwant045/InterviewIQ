@@ -1,0 +1,184 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password_hash String
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+
+  profile       Profile?
+  resumes       Resume[]
+  user_skills   UserSkill[]
+  interviews    Interview[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Profile {
+  id             String   @id @default(uuid())
+  user_id        String   @unique
+  education      String?
+  experience     String?
+  target_role    String   @default("Full Stack Engineer")
+  target_company String?
+  bio            String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("profiles")
+}
+
+model Resume {
+  id              String   @id @default(uuid())
+  user_id         String
+  filename        String
+  file_url        String
+  extracted_text  String
+  skills_detected String[]
+  created_at      DateTime @default(now())
+
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("resumes")
+}
+
+model Skill {
+  id          String      @id @default(uuid())
+  skill_name  String      @unique
+  category    String      @default("General")
+  created_at  DateTime    @default(now())
+
+  user_skills UserSkill[]
+
+  @@map("skills")
+}
+
+model UserSkill {
+  id          String   @id @default(uuid())
+  user_id     String
+  skill_id    String
+  proficiency String   @default("Intermediate") // Beginner, Intermediate, Advanced, Expert
+  created_at  DateTime @default(now())
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  skill       Skill    @relation(fields: [skill_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, skill_id])
+  @@index([user_id])
+  @@index([skill_id])
+  @@map("user_skills")
+}
+
+model Interview {
+  id                     String             @id @default(uuid())
+  user_id                String
+  company                String
+  role                   String
+  difficulty             String             // Junior, Mid-Level, Senior, Lead
+  type                   String             // Technical, Behavioral, System Design, Custom
+  status                 String             @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+  duration_minutes       Int                @default(30)
+  current_question_index Int                @default(0)
+  created_at             DateTime           @default(now())
+  updated_at             DateTime           @updatedAt
+
+  user                   User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  questions              Question[]
+  interview_answers      InterviewAnswer[]
+  evaluation             Evaluation?
+  interview_report       InterviewReport?
+
+  @@index([user_id])
+  @@index([status])
+  @@map("interviews")
+}
+
+model Question {
+  id           String            @id @default(uuid())
+  interview_id String
+  question_text String
+  topic        String
+  difficulty   String
+  order_index  Int
+  type         String            @default("technical") // technical, behavioral, system_design, coding
+  starter_code String?
+  created_at   DateTime          @default(now())
+
+  interview    Interview         @relation(fields: [interview_id], references: [id], onDelete: Cascade)
+  answers      InterviewAnswer[]
+
+  @@index([interview_id])
+  @@map("questions")
+}
+
+model InterviewAnswer {
+  id                 String    @id @default(uuid())
+  interview_id       String
+  question_id        String
+  answer             String
+  score              Float     @default(0)
+  feedback           String
+  follow_up_question String?
+  code_submitted     String?
+  created_at         DateTime  @default(now())
+
+  interview          Interview @relation(fields: [interview_id], references: [id], onDelete: Cascade)
+  question           Question  @relation(fields: [question_id], references: [id], onDelete: Cascade)
+
+  @@index([interview_id])
+  @@index([question_id])
+  @@map("interview_answers")
+}
+
+model Evaluation {
+  id                        String    @id @default(uuid())
+  interview_id              String    @unique
+  technical_score           Float
+  communication_score       Float
+  workmap_presentation      Float
+  workmap_opportunistic     Float
+  workmap_business_acumen   Float
+  workmap_closing_technique Float
+  radar_professionalism     Float
+  radar_attitude            Float
+  radar_creativity          Float
+  radar_communication       Float
+  radar_leadership          Float
+  radar_teamwork            Float
+  feedback                  String
+  created_at                DateTime  @default(now())
+
+  interview                 Interview @relation(fields: [interview_id], references: [id], onDelete: Cascade)
+
+  @@map("evaluations")
+}
+
+model InterviewReport {
+  id               String    @id @default(uuid())
+  interview_id     String    @unique
+  overall_score    Float
+  strengths        String[]
+  weaknesses       String[]
+  recommendations  String[]
+  detailed_summary String
+  created_at       DateTime  @default(now())
+
+  interview        Interview @relation(fields: [interview_id], references: [id], onDelete: Cascade)
+
+  @@map("interview_reports")
+}
+

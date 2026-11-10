@@ -255,3 +255,4 @@ def call_llm_json(
 
     # 3. Resilient fallback generator
     return _generate_fallback_structured(user_prompt, response_model)
+

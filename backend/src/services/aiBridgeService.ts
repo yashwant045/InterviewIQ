@@ -28,6 +28,7 @@ export interface EvaluateAnswerParams {
   answer: string;
   code_submitted?: string;
   difficulty: string;
+  ideal_answer?: string;
 }
 
 export interface AnswerEvaluationResult {
@@ -266,46 +267,112 @@ Wrap commands inside an EVAL Lua script to execute atomically without concurrenc
   }
 
   private internalFallbackEvaluateAnswer(params: EvaluateAnswerParams): AnswerEvaluationResult {
-    const length = (params.answer || '').trim().length;
-    let baseScore = 75;
+    const answerText = (params.answer || '').trim().toLowerCase();
+    const idealText = (params.ideal_answer || '').trim().toLowerCase();
+    const words = answerText.split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
 
-    if (length > 200) baseScore += 12;
-    else if (length > 80) baseScore += 6;
-    else if (length < 25) baseScore -= 20;
+    // 1. Evasion / Refusal / Nonsense check
+    const evasionPhrases = [
+      "don't know", "dont know", "do not know", "no idea", "not sure",
+      "skip", "pass", "idk", "no answer", "nothing", "wrong",
+      "cant answer", "can't answer", "random", "blah", "test", "dunno"
+    ];
+    const isEvasion = evasionPhrases.some((p) => answerText.includes(p)) && wordCount < 15;
+    const isEmpty = wordCount < 3;
 
-    if (params.code_submitted && params.code_submitted.length > 50) {
-      baseScore += 5;
+    if (isEmpty || isEvasion) {
+      const score = 8;
+      return {
+        score,
+        feedback:
+          'Incorrect / Evasive. You did not provide a valid technical solution. In a real technical interview, state your foundational reasoning or clarify assumptions rather than skipping.',
+        follow_up_question: 'Could you share your thought process or any high-level intuition on this topic?',
+        radar_adjustments: {
+          professionalism: 15,
+          attitude: 15,
+          creativity: 10,
+          communication: 10,
+          leadership: 10,
+          teamwork: 12,
+        },
+        workmap_scores: {
+          presentation: 15,
+          opportunistic: 10,
+          businessAcumen: 12,
+          closingTechnique: 10,
+        },
+      };
     }
 
-    const finalScore = Math.min(96, Math.max(45, baseScore));
+    // 2. Keyword & Concept Overlap with ideal_answer
+    const stopWords = new Set([
+      'the', 'a', 'an', 'and', 'or', 'in', 'on', 'at', 'to', 'for', 'with',
+      'by', 'about', 'of', 'from', 'as', 'is', 'are', 'was', 'were', 'be',
+      'have', 'has', 'had', 'do', 'does', 'did', 'this', 'that', 'these',
+      'it', 'its', 'you', 'your', 'we', 'our', 'they', 'their', 'will',
+      'would', 'should', 'could', 'can', 'than', 'into', 'ideal', 'answer',
+      'solution', 'candidate', 'approach', 'structure', 'using'
+    ]);
 
-    const followUps = [
-      `Could you expand on the trade-offs of that approach, specifically regarding network overhead or memory footprint?`,
-      `How would you test this solution under high concurrent load or edge failure conditions?`,
-      `If scale increased by 100x tomorrow at ${params.company}, what part of your proposed approach breaks first?`,
-    ];
-    const followUp = followUps[Math.floor(Math.random() * followUps.length)];
+    const idealTerms = new Set(
+      idealText.match(/[a-zA-Z0-9_\-\+]+/g)?.filter((w) => w.length > 3 && !stopWords.has(w)) || []
+    );
+
+    const candidateTerms = new Set(
+      answerText.match(/[a-zA-Z0-9_\-\+]+/g)?.filter((w) => w.length > 3 && !stopWords.has(w)) || []
+    );
+
+    let matchCount = 0;
+    const matchedTerms: string[] = [];
+    candidateTerms.forEach((term) => {
+      if (idealTerms.has(term)) {
+        matchCount++;
+        matchedTerms.push(term);
+      }
+    });
+
+    const totalIdeal = Math.max(1, idealTerms.size);
+    const coverage = matchCount / totalIdeal;
+
+    let score = 10;
+    let feedback = '';
+
+    if (coverage < 0.10) {
+      // Completely wrong / off-topic
+      score = Math.min(25, Math.max(8, Math.round(10 + coverage * 100)));
+      const missing = Array.from(idealTerms).slice(0, 4).join(', ');
+      feedback = `Incorrect response. Your answer did not address the required technical concepts. You missed essential components such as: ${missing || 'core architecture principles'}.`;
+    } else if (coverage < 0.25) {
+      score = Math.min(48, Math.max(26, Math.round(25 + coverage * 80)));
+      const missing = Array.from(idealTerms).filter((t) => !candidateTerms.has(t)).slice(0, 3).join(', ');
+      feedback = `Partially recognized the domain but missing critical architecture. You missed: ${missing}.`;
+    } else if (coverage < 0.50) {
+      score = Math.min(76, Math.max(50, Math.round(50 + coverage * 50)));
+      const missing = Array.from(idealTerms).filter((t) => !candidateTerms.has(t)).slice(0, 3).join(', ');
+      feedback = `Good conceptual foundation. You covered ${matchedTerms.slice(0, 3).join(', ')}, but omitted edge cases and trade-offs regarding ${missing}.`;
+    } else {
+      score = Math.min(96, Math.max(78, Math.round(75 + coverage * 20)));
+      feedback = `Outstanding technical accuracy! Your response accurately aligns with the expected model solution and demonstrates senior-level technical depth.`;
+    }
 
     return {
-      score: finalScore,
-      feedback:
-        finalScore >= 80
-          ? `Strong response! You clearly structured your approach with concrete technical justification and demonstrated solid familiarity with ${params.role} best practices.`
-          : `Good initial foundation. To make this answer stand out, highlight specific edge cases, quantify performance impact, and structure your answer using the STAR or problem-solution-impact method.`,
-      follow_up_question: followUp,
+      score,
+      feedback,
+      follow_up_question: `Could you elaborate on the operational and memory trade-offs of that approach under high load?`,
       radar_adjustments: {
-        professionalism: Math.min(95, finalScore + 4),
-        attitude: Math.min(92, finalScore + 2),
-        creativity: Math.min(90, finalScore - 2),
-        communication: Math.min(94, finalScore + 1),
-        leadership: Math.min(88, finalScore - 5),
-        teamwork: Math.min(92, finalScore),
+        professionalism: Math.min(95, Math.max(12, score + 2)),
+        attitude: Math.min(94, Math.max(12, score + 1)),
+        creativity: Math.min(92, Math.max(10, score - 2)),
+        communication: Math.min(95, Math.max(10, score)),
+        leadership: Math.min(90, Math.max(10, score - 4)),
+        teamwork: Math.min(93, Math.max(12, score - 1)),
       },
       workmap_scores: {
-        presentation: Math.min(95, finalScore + 5),
-        opportunistic: Math.min(85, finalScore - 15),
-        businessAcumen: Math.min(90, finalScore - 3),
-        closingTechnique: Math.min(80, finalScore - 20),
+        presentation: Math.min(95, Math.max(12, score + 3)),
+        opportunistic: Math.min(85, Math.max(10, score - 8)),
+        businessAcumen: Math.min(90, Math.max(10, score - 2)),
+        closingTechnique: Math.min(80, Math.max(10, score - 10)),
       },
     };
   }

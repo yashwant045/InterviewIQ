@@ -113,6 +113,7 @@ export class InterviewService {
       question_text: currentQuestion.question_text,
       answer: data.answer,
       code_submitted: data.code_submitted,
+      ideal_answer: currentQuestion.ideal_answer,
     });
 
     // Save answer

@@ -108,21 +108,138 @@ class LLMService:
         return questions[:req.count]
 
     def evaluate_answer(self, req: EvaluateAnswerRequest) -> EvaluateAnswerResponse:
-        answer_text = req.answer.strip()
+        import re
+        answer_text = req.answer.strip().lower()
+        ideal_text = (req.ideal_answer or "").strip().lower()
         word_count = len(answer_text.split())
 
-        # Baseline evaluation score based on technical depth
-        if word_count > 60:
-            score = 88.0 + random.uniform(-2, 5)
-            feedback = f"Excellent technical depth and structured explanation. You directly addressed the core mechanics for {req.role} at {req.company} with sound engineering rationale."
-        elif word_count > 25:
-            score = 76.0 + random.uniform(-3, 4)
-            feedback = f"Good solid response. You understood the fundamentals. To elevate to a Senior level, elaborate further on latency implications and error recovery."
-        else:
-            score = 58.0 + random.uniform(-3, 3)
-            feedback = "Your answer is quite brief. Consider using the STAR method or outlining specific architectural layers to show depth."
+        # 1. Detection of evasion, refusal, or "I don't know" / nonsense
+        evasion_phrases = [
+            "don't know", "dont know", "do not know", "no idea", "not sure",
+            "skip", "pass", "idk", "no answer", "nothing", "wrong",
+            "cant answer", "can't answer", "random", "blah", "test", "dunno"
+        ]
+        is_evasion = any(phrase in answer_text for phrase in evasion_phrases) and word_count < 15
+        is_empty = word_count < 3
 
-        score = max(45.0, min(97.0, round(score, 1)))
+        if is_empty or is_evasion:
+            score = round(random.uniform(5.0, 12.0), 1)
+            feedback = (
+                "Incorrect / Evasive. You did not provide a valid technical solution for this question. "
+                "In a real technical interview, state your foundational reasoning or clarify assumptions rather than skipping."
+            )
+            radar = RadarAdjustments(
+                professionalism=round(score + 10.0, 1),
+                attitude=round(score + 8.0, 1),
+                creativity=round(score + 5.0, 1),
+                communication=round(score + 5.0, 1),
+                leadership=round(score + 2.0, 1),
+                teamwork=round(score + 5.0, 1)
+            )
+            workmap = WorkmapScores(
+                presentation=round(score + 5.0, 1),
+                opportunistic=round(score + 2.0, 1),
+                businessAcumen=round(score + 5.0, 1),
+                closingTechnique=round(score + 2.0, 1)
+            )
+            return EvaluateAnswerResponse(
+                score=score,
+                feedback=feedback,
+                follow_up_question="Could you share any prior experience you have with this concept, even at a high level?",
+                radar_adjustments=radar,
+                workmap_scores=workmap
+            )
+
+        # 2. Extract technical keywords from ideal_answer
+        stop_words = {
+            "the", "a", "an", "and", "or", "in", "on", "at", "to", "for", "with",
+            "by", "about", "of", "from", "as", "is", "are", "was", "were", "be",
+            "been", "being", "have", "has", "had", "do", "does", "did", "this",
+            "that", "these", "those", "it", "its", "you", "your", "we", "our",
+            "they", "their", "will", "would", "should", "could", "can", "may",
+            "might", "must", "than", "then", "into", "through", "during", "such",
+            "all", "any", "both", "each", "few", "more", "most", "other", "some",
+            "no", "nor", "not", "only", "own", "same", "so", "very",
+            "ideal", "answer", "question", "exemplary", "benchmark", "senior-level",
+            "solution", "candidate", "approach", "structure", "system", "using"
+        }
+
+        ideal_words = set(re.findall(r'[a-zA-Z0-9_\-\+]+', ideal_text))
+        technical_ideal_terms = {w for w in ideal_words if len(w) > 3 and w not in stop_words}
+
+        candidate_words = set(re.findall(r'[a-zA-Z0-9_\-\+]+', answer_text))
+        matched_terms = candidate_words.intersection(technical_ideal_terms)
+
+        if technical_ideal_terms:
+            concept_coverage = len(matched_terms) / len(technical_ideal_terms)
+        else:
+            concept_coverage = 0.5
+
+        # Optional code submission check
+        code_bonus = 0.0
+        if req.code_submitted and len(req.code_submitted.strip()) > 40:
+            code_text = req.code_submitted.strip().lower()
+            if "return false" in code_text and "map" not in code_text and "deque" not in code_text and "window" not in code_text:
+                code_bonus = 0.0
+            else:
+                code_bonus = 10.0
+
+        # Comparative evaluation against ideal answer
+        if concept_coverage < 0.10:
+            # Completely wrong / off-topic
+            raw_score = 8.0 + (concept_coverage * 100) + code_bonus
+            raw_score = min(25.0, max(5.0, raw_score))
+            missing_preview = ', '.join(list(technical_ideal_terms)[:4]) if technical_ideal_terms else "required architectural concepts"
+            feedback = (
+                f"Incorrect response. Your answer did not address the required technical solution. "
+                f"You missed essential components such as: {missing_preview}."
+            )
+        elif concept_coverage < 0.25:
+            # Flawed / superficial attempt
+            raw_score = 25.0 + (concept_coverage * 80) + code_bonus
+            raw_score = min(48.0, max(26.0, raw_score))
+            missing_preview = ', '.join(list(technical_ideal_terms - matched_terms)[:4])
+            feedback = (
+                f"Partially relevant but incomplete. You mentioned general points, but failed to explain key mechanics "
+                f"like: {missing_preview}."
+            )
+        elif concept_coverage < 0.50:
+            # Moderate foundation, missing edge cases/trade-offs
+            raw_score = 50.0 + (concept_coverage * 50) + code_bonus
+            raw_score = min(76.0, max(50.0, raw_score))
+            missing_preview = ', '.join(list(technical_ideal_terms - matched_terms)[:3])
+            matched_preview = ', '.join(list(matched_terms)[:3])
+            feedback = (
+                f"Good conceptual foundation. You covered {matched_preview}, but to reach senior level depth, "
+                f"address edge cases and trade-offs regarding: {missing_preview}."
+            )
+        else:
+            # Strong alignment with ideal answer
+            raw_score = 78.0 + (concept_coverage * 20) + code_bonus
+            raw_score = min(96.0, max(78.0, raw_score))
+            feedback = (
+                f"Outstanding technical accuracy! Your answer directly matches the expected model solution, "
+                f"demonstrating sound understanding of production trade-offs and best practices."
+            )
+
+        score = round(raw_score, 1)
+
+        # Scale Radar & Workmap proportional to actual score
+        radar = RadarAdjustments(
+            professionalism=min(96.0, max(15.0, round(score + 2.0, 1))),
+            attitude=min(94.0, max(15.0, round(score + 1.0, 1))),
+            creativity=min(92.0, max(10.0, round(score - 2.0, 1))),
+            communication=min(95.0, max(10.0, round(score, 1))),
+            leadership=min(90.0, max(10.0, round(score - 4.0, 1))),
+            teamwork=min(93.0, max(12.0, round(score - 1.0, 1)))
+        )
+
+        workmap = WorkmapScores(
+            presentation=min(95.0, max(15.0, round(score + 3.0, 1))),
+            opportunistic=min(85.0, max(10.0, round(score - 8.0, 1))),
+            businessAcumen=min(90.0, max(10.0, round(score - 2.0, 1))),
+            closingTechnique=min(80.0, max(10.0, round(score - 10.0, 1)))
+        )
 
         follow_ups = [
             f"How would this architecture behave if network latency between services spikes to 500ms at {req.company}?",
@@ -130,22 +247,6 @@ class LLMService:
             "Could you explain the memory complexity trade-off if we increased the throughput requirement by 10x?"
         ]
         chosen_follow_up = random.choice(follow_ups)
-
-        radar = RadarAdjustments(
-            professionalism=min(96.0, score + 3.0),
-            attitude=min(94.0, score + 2.0),
-            creativity=min(92.0, score - 1.0),
-            communication=min(95.0, score + 1.0),
-            leadership=min(90.0, score - 4.0),
-            teamwork=min(93.0, score)
-        )
-
-        workmap = WorkmapScores(
-            presentation=min(95.0, score + 4.0),
-            opportunistic=min(85.0, score - 15.0),
-            businessAcumen=min(90.0, score - 2.0),
-            closingTechnique=min(80.0, score - 18.0)
-        )
 
         return EvaluateAnswerResponse(
             score=score,

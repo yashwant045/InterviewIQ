@@ -32,6 +32,7 @@ class EvaluateAnswerRequest(BaseModel):
     answer: str
     code_submitted: Optional[str] = None
     difficulty: str = "Mid-Level"
+    ideal_answer: Optional[str] = None
 
 class RadarAdjustments(BaseModel):
     professionalism: float

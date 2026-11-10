@@ -235,6 +235,19 @@
       "current_question_index": 6,
       "created_at": "2026-11-09T02:21:20.150Z",
       "updated_at": "2026-11-09T02:27:11.894Z"
+    },
+    {
+      "id": "int-d6aca663",
+      "user_id": "user-54352569",
+      "company": "Google",
+      "role": "Full Stack Engineer",
+      "difficulty": "Mid-Level",
+      "type": "Technical",
+      "status": "COMPLETED",
+      "duration_minutes": 30,
+      "current_question_index": 6,
+      "created_at": "2026-11-09T03:09:38.963Z",
+      "updated_at": "2026-11-09T03:20:44.543Z"
     }
   ],
   "questions": [
@@ -433,6 +446,72 @@
       "type": "technical",
       "starter_code": null,
       "ideal_answer": "Event loop runs phases: Timers -> Pending callbacks -> Poll (I/O) -> Check (setImmediate) -> Close callbacks. Microtasks (process.nextTick, Promise .then) run immediately between phase transitions with priority. Unhandled Promise rejections trigger unhandledRejection events and terminate the Node process in modern versions, potentially leaking connection pool resources and crashing pods."
+    },
+    {
+      "id": "q-804d79a2",
+      "interview_id": "int-d6aca663",
+      "question_text": "In building high-performance modern web platforms for Google, how do you manage state synchronization, WebSocket reconnect backoffs, and optimistic UI updates?",
+      "topic": "Client-Server State Sync",
+      "difficulty": "Mid-Level",
+      "order_index": 1,
+      "type": "technical",
+      "starter_code": null,
+      "ideal_answer": "1. State Sync: Event-driven client cache (TanStack Query/normalized store) with monotonic version IDs for conflict resolution. 2. WebSockets: Exponential backoff with full randomized jitter (e.g. 500ms doubling to 10s ceiling with ±20% jitter) to eliminate thundering herd connection spikes. 3. Optimistic UI: Apply mutation immediately to local cache with temporary ID and snapshot rollback buffer; reconcile upon canonical server ack."
+    },
+    {
+      "id": "q-25fbe97c",
+      "interview_id": "int-d6aca663",
+      "question_text": "Given an array of incoming HTTP requests with timestamps and IP addresses, write an algorithm to determine if an IP has exceeded a rate limit of 10 requests per 10-second window.",
+      "topic": "Algorithms & Concurrency",
+      "difficulty": "Mid-Level",
+      "order_index": 2,
+      "type": "coding",
+      "starter_code": "// Sliding Window Rate Limiter\nfunction isRateLimited(requests, windowSeconds = 10, maxLimit = 10) {\n  // Implement sliding window algorithm\n  return false;\n}",
+      "ideal_answer": "Sliding Window Log algorithm: For each IP, maintain a deque of timestamps. On request arrival at T, prune timestamps older than (T - 10,000ms). If queue length >= 10, reject with HTTP 429 and Retry-After header; otherwise append T and allow. In distributed production, execute atomically in Redis using a Sorted Set (ZREMRANGEBYSCORE + ZADD + ZCARD) wrapped in an EVAL Lua script to eliminate race conditions."
+    },
+    {
+      "id": "q-dd01ab36",
+      "interview_id": "int-d6aca663",
+      "question_text": "Explain how the Node.js event loop coordinates timers, I/O polling, and microtasks, and how unhandled Promise rejections affect application stability in production.",
+      "topic": "Event Loop & Concurrency",
+      "difficulty": "Mid-Level",
+      "order_index": 3,
+      "type": "technical",
+      "starter_code": null,
+      "ideal_answer": "Event loop runs phases: Timers -> Pending callbacks -> Poll (I/O) -> Check (setImmediate) -> Close callbacks. Microtasks (process.nextTick, Promise .then) run immediately between phase transitions with priority. Unhandled Promise rejections trigger unhandledRejection events and terminate the Node process in modern versions, potentially leaking connection pool resources and crashing pods."
+    },
+    {
+      "id": "q-a9675ec2",
+      "interview_id": "int-d6aca663",
+      "question_text": "In building high-performance modern web platforms for Google, how do you manage state synchronization, WebSocket reconnect backoffs, and optimistic UI updates?",
+      "topic": "Client-Server State Sync",
+      "difficulty": "Mid-Level",
+      "order_index": 1,
+      "type": "technical",
+      "starter_code": null,
+      "ideal_answer": "1. State Sync: Event-driven client cache (TanStack Query/normalized store) with monotonic version IDs for conflict resolution. 2. WebSockets: Exponential backoff with full randomized jitter (e.g. 500ms doubling to 10s ceiling with ±20% jitter) to eliminate thundering herd connection spikes. 3. Optimistic UI: Apply mutation immediately to local cache with temporary ID and snapshot rollback buffer; reconcile upon canonical server ack."
+    },
+    {
+      "id": "q-02f1b9f6",
+      "interview_id": "int-d6aca663",
+      "question_text": "Given an array of incoming HTTP requests with timestamps and IP addresses, write an algorithm to determine if an IP has exceeded a rate limit of 10 requests per 10-second window.",
+      "topic": "Algorithms & Concurrency",
+      "difficulty": "Mid-Level",
+      "order_index": 2,
+      "type": "coding",
+      "starter_code": "// Sliding Window Rate Limiter\nfunction isRateLimited(requests, windowSeconds = 10, maxLimit = 10) {\n  // Implement sliding window algorithm\n  return false;\n}",
+      "ideal_answer": "Sliding Window Log algorithm: For each IP, maintain a deque of timestamps. On request arrival at T, prune timestamps older than (T - 10,000ms). If queue length >= 10, reject with HTTP 429 and Retry-After header; otherwise append T and allow. In distributed production, execute atomically in Redis using a Sorted Set (ZREMRANGEBYSCORE + ZADD + ZCARD) wrapped in an EVAL Lua script to eliminate race conditions."
+    },
+    {
+      "id": "q-1694fa9f",
+      "interview_id": "int-d6aca663",
+      "question_text": "Explain how the Node.js event loop coordinates timers, I/O polling, and microtasks, and how unhandled Promise rejections affect application stability in production.",
+      "topic": "Event Loop & Concurrency",
+      "difficulty": "Mid-Level",
+      "order_index": 3,
+      "type": "technical",
+      "starter_code": null,
+      "ideal_answer": "Event loop runs phases: Timers -> Pending callbacks -> Poll (I/O) -> Check (setImmediate) -> Close callbacks. Microtasks (process.nextTick, Promise .then) run immediately between phase transitions with priority. Unhandled Promise rejections trigger unhandledRejection events and terminate the Node process in modern versions, potentially leaking connection pool resources and crashing pods."
     }
   ],
   "interview_answers": [
@@ -499,6 +578,70 @@
       "follow_up_question": "What monitoring metrics and alerts would you establish to detect degradation in this component?",
       "code_submitted": "// Sliding Window Rate Limiter\nfunction isRateLimited(requests, windowSeconds = 10, maxLimit = 10) {\n  // Implement sliding window algorithm\n  return false;\n}",
       "created_at": "2026-11-09T02:27:11.892Z"
+    },
+    {
+      "id": "ans-b58aef14",
+      "interview_id": "int-d6aca663",
+      "question_id": "q-804d79a2",
+      "answer": "hello",
+      "score": 60.2,
+      "feedback": "Your answer is quite brief. Consider using the STAR method or outlining specific architectural layers to show depth.",
+      "follow_up_question": "Could you explain the memory complexity trade-off if we increased the throughput requirement by 10x?",
+      "created_at": "2026-11-09T03:19:26.557Z"
+    },
+    {
+      "id": "ans-103ab30d",
+      "interview_id": "int-d6aca663",
+      "question_id": "q-a9675ec2",
+      "answer": "yeah I increase my penis",
+      "score": 59.8,
+      "feedback": "Your answer is quite brief. Consider using the STAR method or outlining specific architectural layers to show depth.",
+      "follow_up_question": "How would this architecture behave if network latency between services spikes to 500ms at Google?",
+      "created_at": "2026-11-09T03:19:45.483Z"
+    },
+    {
+      "id": "ans-e9fec2df",
+      "interview_id": "int-d6aca663",
+      "question_id": "q-25fbe97c",
+      "answer": "it will increase the Wi-Fi seconds",
+      "score": 55.4,
+      "feedback": "Your answer is quite brief. Consider using the STAR method or outlining specific architectural layers to show depth.",
+      "follow_up_question": "Could you explain the memory complexity trade-off if we increased the throughput requirement by 10x?",
+      "code_submitted": "// Sliding Window Rate Limiter\nfunction isRateLimited(requests, windowSeconds = 10, maxLimit = 10) {\n  // Implement sliding window algorithm\n  return false;\n}",
+      "created_at": "2026-11-09T03:20:04.374Z"
+    },
+    {
+      "id": "ans-9da4015f",
+      "interview_id": "int-d6aca663",
+      "question_id": "q-02f1b9f6",
+      "answer": "temperature by 10 x",
+      "score": 59.1,
+      "feedback": "Your answer is quite brief. Consider using the STAR method or outlining specific architectural layers to show depth.",
+      "follow_up_question": "Could you explain the memory complexity trade-off if we increased the throughput requirement by 10x?",
+      "code_submitted": "// Sliding Window Rate Limiter\nfunction isRateLimited(requests, windowSeconds = 10, maxLimit = 10) {\n  // Implement sliding window algorithm\n  return false;\n}",
+      "created_at": "2026-11-09T03:20:18.677Z"
+    },
+    {
+      "id": "ans-e133368b",
+      "interview_id": "int-d6aca663",
+      "question_id": "q-dd01ab36",
+      "answer": "what we can",
+      "score": 55,
+      "feedback": "Your answer is quite brief. Consider using the STAR method or outlining specific architectural layers to show depth.",
+      "follow_up_question": "What monitoring metrics and alerts would you establish to detect degradation in this component?",
+      "code_submitted": "// Sliding Window Rate Limiter\nfunction isRateLimited(requests, windowSeconds = 10, maxLimit = 10) {\n  // Implement sliding window algorithm\n  return false;\n}",
+      "created_at": "2026-11-09T03:20:30.531Z"
+    },
+    {
+      "id": "ans-5edc1026",
+      "interview_id": "int-d6aca663",
+      "question_id": "q-1694fa9f",
+      "answer": "we can detector detection in this components",
+      "score": 59.7,
+      "feedback": "Your answer is quite brief. Consider using the STAR method or outlining specific architectural layers to show depth.",
+      "follow_up_question": "Could you explain the memory complexity trade-off if we increased the throughput requirement by 10x?",
+      "code_submitted": "// Sliding Window Rate Limiter\nfunction isRateLimited(requests, windowSeconds = 10, maxLimit = 10) {\n  // Implement sliding window algorithm\n  return false;\n}",
+      "created_at": "2026-11-09T03:20:44.542Z"
     }
   ],
   "evaluations": [
@@ -555,6 +698,24 @@
       "radar_teamwork": 0,
       "feedback": "The candidate concluded this interview session without speaking or submitting any answers. No evaluation score can be awarded.",
       "created_at": "2026-11-09T02:29:56.288Z"
+    },
+    {
+      "id": "eval-0bf06c8c",
+      "interview_id": "int-d6aca663",
+      "technical_score": 59.2,
+      "communication_score": 57.2,
+      "workmap_presentation": 61.2,
+      "workmap_opportunistic": 46.2,
+      "workmap_business_acumen": 56.2,
+      "workmap_closing_technique": 43.2,
+      "radar_professionalism": 60.2,
+      "radar_attitude": 59.2,
+      "radar_creativity": 56.2,
+      "radar_communication": 58.2,
+      "radar_leadership": 54.2,
+      "radar_teamwork": 57.2,
+      "feedback": "Candidate completed 6 answered question(s) for Full Stack Engineer (Mid-Level level). Achieved an overall score of 58.2% based strictly on candidate submissions.",
+      "created_at": "2026-11-09T03:20:44.551Z"
     }
   ],
   "interview_reports": [
@@ -615,6 +776,27 @@
       ],
       "detailed_summary": "The candidate concluded this interview session without speaking or submitting any answers. No evaluation score can be awarded.",
       "created_at": "2026-11-09T02:29:56.291Z"
+    },
+    {
+      "id": "rep-60297c06",
+      "interview_id": "int-d6aca663",
+      "overall_score": 58.2,
+      "strengths": [
+        "Demonstrated technical reasoning on questions answered for Google.",
+        "Methodical articulation during live interview responses.",
+        "Active attempt to address core architectural challenges."
+      ],
+      "weaknesses": [
+        "Could state operational trade-offs and edge cases more explicitly.",
+        "Ensure all questions are fully answered with quantitative justifications."
+      ],
+      "recommendations": [
+        "Structure system design answers starting with functional requirements and back-of-the-envelope calculations.",
+        "Familiarize yourself with Google's engineering blog and open-source distributed systems.",
+        "Practice speaking technical answers aloud under timed conditions."
+      ],
+      "detailed_summary": "Candidate completed 6 answered question(s) for Full Stack Engineer (Mid-Level level). Achieved an overall score of 58.2% based strictly on candidate submissions.",
+      "created_at": "2026-11-09T03:20:44.553Z"
     }
   ]
 }

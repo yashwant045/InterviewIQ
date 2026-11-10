@@ -15,3 +15,4 @@ Write-Host "Frontend:    http://localhost:5173" -ForegroundColor Cyan
 Write-Host "Backend API: http://localhost:5000/health" -ForegroundColor Cyan
 Write-Host "AI Engine:   http://localhost:8000/health" -ForegroundColor Cyan
 Write-Host "====================================================" -ForegroundColor Cyan
+

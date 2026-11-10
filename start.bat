@@ -21,3 +21,4 @@ echo Backend API: http://localhost:5000/health
 echo AI Engine:   http://localhost:8000/health
 echo ====================================================
 pause
+

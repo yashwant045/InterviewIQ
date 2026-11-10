@@ -9,9 +9,11 @@ from typing import List, Optional, Dict, Any
 try:
     from app.schemas.schemas import InterviewContext, GeneratedQuestion, AnswerEvaluation
     from app.services.llm_client import call_llm_json
+    from app.prompts.interview_prompts import RESUME_DEEP_DIVE_PROMPT
 except ImportError:
     from schemas import InterviewContext, GeneratedQuestion, AnswerEvaluation
     from llm_client import call_llm_json
+    from prompts.interview_prompts import RESUME_DEEP_DIVE_PROMPT
 
 
 # ==========================================
@@ -132,4 +134,81 @@ Recent Interview Conversation History:
     )
 
     return generated
+
+
+def generate_resume_based_question(context: InterviewContext) -> GeneratedQuestion:
+    """
+    Generates a personalized interview question targeting a specific project, claim,
+    or technical achievement directly from the candidate's uploaded resume.
+
+    Falls back to a standard behavioral question if resume_text is empty or too short.
+
+    Parameters:
+    - context (InterviewContext): Interview context including role, company, difficulty,
+      skills, and candidate resume_text.
+
+    Returns:
+    - GeneratedQuestion: Validated Pydantic model with topic set to 'Resume Deep Dive'.
+    """
+    resume_text = (context.resume_text or "").strip()
+
+    # Fallback to standard behavioral question if resume_text is empty or too short (< 40 chars)
+    if len(resume_text) < 40:
+        return GeneratedQuestion(
+            question_text=(
+                f"Welcome! As a {context.role} interviewing for {context.company}, "
+                "could you walk me through a major engineering initiative or complex technical challenge you led recently, "
+                "including the architecture, your trade-offs, and the final business impact?"
+            ),
+            topic="Resume Deep Dive",
+            expected_ideal_answer=(
+                "A strong STAR-format answer detailing: 1. Situation and scale of challenge. "
+                "2. Concrete architectural responsibilities and technology selection. "
+                "3. Execution hurdles, mitigation strategies, and measurable production impact (e.g., latency, reliability, cost)."
+            ),
+            requires_code=False,
+            is_followup=False,
+            starter_code=None,
+        )
+
+    skills_str = (
+        ", ".join(context.parsed_resume_skills)
+        if context.parsed_resume_skills
+        else "Modern Full-Stack, System Architecture, Algorithms"
+    )
+
+    system_prompt = RESUME_DEEP_DIVE_PROMPT.format(
+        role=context.role,
+        company=context.company,
+        resume_text=resume_text,
+    )
+
+    user_prompt = f"""
+Candidate Context:
+- Target Role: {context.role}
+- Target Company: {context.company}
+- Seniority Level: {context.difficulty}
+- Parsed Skills: {skills_str}
+
+Candidate Resume Text:
+\"\"\"
+{resume_text}
+\"\"\"
+
+Directive:
+Carefully read the candidate's resume text above. Identify a specific, notable project, architecture, or quantitative achievement.
+Formulate one targeted interview question directly cross-examining that resume detail.
+Set topic to "Resume Deep Dive" and provide a comprehensive expected_ideal_answer.
+""".strip()
+
+    question: GeneratedQuestion = call_llm_json(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        response_model=GeneratedQuestion,
+    )
+
+    # Ensure topic is explicitly "Resume Deep Dive"
+    question.topic = "Resume Deep Dive"
+    return question
+
 

@@ -6,11 +6,13 @@ and `from app.services.question_generator import generate_next_question`.
 
 from app.services.question_generator import (
     generate_next_question,
+    generate_resume_based_question,
     QUESTION_GENERATOR_SYSTEM_PROMPT,
 )
 
 __all__ = [
     "generate_next_question",
+    "generate_resume_based_question",
     "QUESTION_GENERATOR_SYSTEM_PROMPT",
 ]
 

@@ -59,16 +59,47 @@ export class InterviewService {
       const profileData = await userRepository.getProfile(userId);
       const skills = profileData.skills.map((s) => s.skill_name);
       const latestResume = await resumeRepository.findByUserId(userId);
+      const resumeText = latestResume ? latestResume.extracted_text : undefined;
 
-      const generated = await aiBridgeService.generateQuestions({
-        role: interview.role,
-        company: interview.company,
-        difficulty: interview.difficulty,
-        type: interview.type,
-        skills,
-        resumeText: latestResume ? latestResume.extracted_text : undefined,
-        count: 3,
-      });
+      let generated = [];
+
+      // If candidate has an uploaded resume, make Question 1 a personalized Resume Deep Dive
+      if (resumeText && resumeText.length > 40) {
+        const resumeQ = await aiBridgeService.generateResumeQuestion({
+          role: interview.role,
+          company: interview.company,
+          difficulty: interview.difficulty,
+          skills,
+          resume_text: resumeText,
+        });
+
+        const remainingQs = await aiBridgeService.generateQuestions({
+          role: interview.role,
+          company: interview.company,
+          difficulty: interview.difficulty,
+          type: interview.type,
+          skills,
+          resumeText,
+          count: 2,
+        });
+
+        resumeQ.order_index = 1;
+        remainingQs.forEach((q, idx) => {
+          q.order_index = idx + 2;
+        });
+
+        generated = [resumeQ, ...remainingQs];
+      } else {
+        generated = await aiBridgeService.generateQuestions({
+          role: interview.role,
+          company: interview.company,
+          difficulty: interview.difficulty,
+          type: interview.type,
+          skills,
+          resumeText: undefined,
+          count: 3,
+        });
+      }
 
       questions = await interviewRepository.addQuestions(interviewId, generated);
     }

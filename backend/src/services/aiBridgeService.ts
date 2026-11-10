@@ -100,6 +100,45 @@ export class AIBridgeService {
     return this.internalFallbackGenerateQuestions(params);
   }
 
+  async generateResumeQuestion(params: {
+    role: string;
+    company: string;
+    difficulty: string;
+    skills: string[];
+    resume_text?: string;
+  }): Promise<GeneratedQuestion> {
+    try {
+      const response = await this.client.post('/api/ai/resume-question', {
+        role: params.role,
+        company: params.company,
+        difficulty: params.difficulty,
+        parsed_resume_skills: params.skills,
+        resume_text: params.resume_text,
+      });
+      if (response.data && response.data.question_text) {
+        return {
+          order_index: 1,
+          question_text: response.data.question_text,
+          topic: response.data.topic || 'Resume Deep Dive',
+          difficulty: params.difficulty,
+          type: response.data.requires_code ? 'coding' : 'technical',
+          starter_code: response.data.starter_code,
+          ideal_answer: response.data.expected_ideal_answer,
+        };
+      }
+    } catch (err: any) {
+      console.warn('[AIBridgeService] Resume question endpoint unavailable, using internal fallback:', err.message);
+    }
+    return {
+      order_index: 1,
+      question_text: `I see on your resume that you built key initiatives for ${params.role}. Can you walk me through your most complex architectural decision, the trade-offs you evaluated, and how you handled peak production traffic?`,
+      topic: 'Resume Deep Dive',
+      difficulty: params.difficulty,
+      type: 'technical',
+      ideal_answer: 'Candidate should clearly explain the problem statement, system architecture, technology selection trade-offs, and measurable production impact.',
+    };
+  }
+
   async evaluateAnswer(params: EvaluateAnswerParams): Promise<AnswerEvaluationResult> {
     try {
       const response = await this.client.post('/api/ai/evaluate-answer', params);

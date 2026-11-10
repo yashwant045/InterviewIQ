@@ -22,6 +22,10 @@ class InterviewContext(BaseModel):
         default_factory=list,
         description="List of detected technical and behavioral skills from the candidate's resume"
     )
+    resume_text: Optional[str] = Field(
+        default=None,
+        description="Extracted full text of candidate's uploaded resume for deep-dive questioning"
+    )
 
 
 class GeneratedQuestion(BaseModel):

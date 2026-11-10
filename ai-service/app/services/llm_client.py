@@ -111,14 +111,24 @@ def _generate_fallback_structured(
     lower_prompt = user_prompt.lower()
 
     if model_name == "GeneratedQuestion":
-        data = {
-            "question_text": "In building high-performance modern web platforms for Google, how do you manage state synchronization, WebSocket reconnect backoffs, and optimistic UI updates?",
-            "topic": "Client-Server State Sync",
-            "expected_ideal_answer": "1. Event-driven client state store with monotonic version IDs. 2. Exponential backoff with randomized jitter. 3. Optimistic local cache mutations with snapshot rollback.",
-            "requires_code": False,
-            "is_followup": False,
-            "starter_code": None,
-        }
+        if "resume" in lower_prompt:
+            data = {
+                "question_text": "I see here on your resume that you built high-throughput microservices using Node.js, WebSockets, and Redis. Can you walk me through your specific caching strategy, how you handled hot partition keys, and your approach to failover?",
+                "topic": "Resume Deep Dive",
+                "expected_ideal_answer": "1. Multi-tier caching utilizing Redis Cluster with Cache-Aside pattern. 2. Partition key salting and Probabilistic Early Expiration (XFetch) to eliminate cache stampedes. 3. Sentinel automated failover with read replicas and local memory circuit breaking.",
+                "requires_code": False,
+                "is_followup": False,
+                "starter_code": None,
+            }
+        else:
+            data = {
+                "question_text": "In building high-performance modern web platforms for Google, how do you manage state synchronization, WebSocket reconnect backoffs, and optimistic UI updates?",
+                "topic": "Client-Server State Sync",
+                "expected_ideal_answer": "1. Event-driven client state store with monotonic version IDs. 2. Exponential backoff with randomized jitter. 3. Optimistic local cache mutations with snapshot rollback.",
+                "requires_code": False,
+                "is_followup": False,
+                "starter_code": None,
+            }
         return response_model.model_validate(data)
 
     if model_name == "GeneratedQuestionList":
